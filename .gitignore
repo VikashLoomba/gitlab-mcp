@@ -1,6 +1,7 @@
 node_modules
 .DS_Store
-build
+# Build directory - allow in main branch for npx usage
+# build
 .env
 .env.local
 .env.test
