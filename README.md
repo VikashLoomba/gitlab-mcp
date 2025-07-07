@@ -16,12 +16,33 @@ When using with the Claude App, you need to set up your API key and URLs directl
 
 #### npx
 
+Using npm registry:
 ```json
 {
   "mcpServers": {
     "GitLab communication server": {
       "command": "npx",
       "args": ["-y", "@zereight/mcp-gitlab"],
+      "env": {
+        "GITLAB_PERSONAL_ACCESS_TOKEN": "your_gitlab_token",
+        "GITLAB_API_URL": "your_gitlab_api_url",
+        "GITLAB_READ_ONLY_MODE": "false",
+        "USE_GITLAB_WIKI": "false", // use wiki api?
+        "USE_MILESTONE": "false", // use milestone api?
+        "USE_PIPELINE": "false" // use pipeline api?
+      }
+    }
+  }
+}
+```
+
+Using GitHub repository directly:
+```json
+{
+  "mcpServers": {
+    "GitLab communication server": {
+      "command": "npx",
+      "args": ["-y", "github:VikashLoomba/gitlab-mcp"],
       "env": {
         "GITLAB_PERSONAL_ACCESS_TOKEN": "your_gitlab_token",
         "GITLAB_API_URL": "your_gitlab_api_url",
