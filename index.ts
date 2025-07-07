@@ -184,12 +184,12 @@ import {
   ListMergeRequestDiffsSchema,
 } from "./schemas.js";
 import { randomUUID } from "crypto";
-import { pino } from "pino";
+import { pino } from 'pino';
 
 const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
+  level: process.env.LOG_LEVEL || 'info',
   transport: {
-    target: "pino-pretty",
+    target: 'pino-pretty',
     options: {
       colorize: true,
       levelFirst: true,
@@ -197,13 +197,14 @@ const logger = pino({
   },
 });
 
+  
 /**
  * Available transport modes for MCP server
  */
 enum TransportMode {
-  STDIO = "stdio",
-  SSE = "sse",
-  STREAMABLE_HTTP = "streamable-http",
+  STDIO = 'stdio',
+  SSE = 'sse', 
+  STREAMABLE_HTTP = 'streamable-http'
 }
 
 /**
@@ -243,7 +244,7 @@ const USE_MILESTONE = process.env.USE_MILESTONE === "true";
 const USE_PIPELINE = process.env.USE_PIPELINE === "true";
 const SSE = process.env.SSE === "true";
 const STREAMABLE_HTTP = process.env.STREAMABLE_HTTP === "true";
-const HOST = process.env.HOST || "127.0.0.1";
+const HOST = process.env.HOST || '127.0.0.1';
 const PORT = process.env.PORT || 3002;
 // Add proxy configuration
 const HTTP_PROXY = process.env.HTTP_PROXY;
@@ -283,15 +284,15 @@ httpAgent = httpAgent || new Agent();
 // Create cookie jar with clean Netscape file parsing
 const createCookieJar = (): CookieJar | null => {
   if (!GITLAB_AUTH_COOKIE_PATH) return null;
-
+  
   try {
     const cookiePath = GITLAB_AUTH_COOKIE_PATH.startsWith("~/")
       ? path.join(process.env.HOME || "", GITLAB_AUTH_COOKIE_PATH.slice(2))
       : GITLAB_AUTH_COOKIE_PATH;
-
+    
     const jar = new CookieJar();
     const cookieContent = fs.readFileSync(cookiePath, "utf8");
-
+    
     cookieContent.split("\n").forEach(line => {
       // Handle #HttpOnly_ prefix
       if (line.startsWith("#HttpOnly_")) {
@@ -301,15 +302,15 @@ const createCookieJar = (): CookieJar | null => {
       if (line.startsWith("#") || !line.trim()) {
         return;
       }
-
+      
       // Parse Netscape format: domain, flag, path, secure, expires, name, value
       const parts = line.split("\t");
       if (parts.length >= 7) {
         const [domain, , path, secure, expires, name, value] = parts;
-
+        
         // Build cookie string in standard format
         const cookieStr = `${name}=${value}; Domain=${domain}; Path=${path}${secure === "TRUE" ? "; Secure" : ""}${expires !== "0" ? `; Expires=${new Date(parseInt(expires) * 1000).toUTCString()}` : ""}`;
-
+        
         // Use tough-cookie's parse function for robust parsing
         const cookie = parseCookie(cookieStr);
         if (cookie) {
@@ -318,7 +319,7 @@ const createCookieJar = (): CookieJar | null => {
         }
       }
     });
-
+    
     return jar;
   } catch (error) {
     logger.error("Error loading cookie file:", error);
@@ -333,27 +334,27 @@ const fetch = cookieJar ? fetchCookie(nodeFetch, cookieJar) : nodeFetch;
 // Ensure session is established for the current request
 async function ensureSessionForRequest(): Promise<void> {
   if (!cookieJar || !GITLAB_AUTH_COOKIE_PATH) return;
-
+  
   // Extract the base URL from GITLAB_API_URL
   const apiUrl = new URL(GITLAB_API_URL);
   const baseUrl = `${apiUrl.protocol}//${apiUrl.hostname}`;
-
+  
   // Check if we already have GitLab session cookies
   const gitlabCookies = cookieJar.getCookiesSync(baseUrl);
-  const hasSessionCookie = gitlabCookies.some(
-    cookie => cookie.key === "_gitlab_session" || cookie.key === "remember_user_token"
+  const hasSessionCookie = gitlabCookies.some(cookie => 
+    cookie.key === '_gitlab_session' || cookie.key === 'remember_user_token'
   );
-
+  
   if (!hasSessionCookie) {
     try {
       // Establish session with a lightweight request
       await fetch(`${GITLAB_API_URL}/user`, {
         ...DEFAULT_FETCH_CONFIG,
-        redirect: "follow",
+        redirect: 'follow'
       }).catch(() => {
         // Ignore errors - the important thing is that cookies get set during redirects
       });
-
+      
       // Small delay to ensure cookies are fully processed
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
@@ -646,8 +647,7 @@ const allTools = [
   },
   {
     name: "get_pipeline_job_output",
-    description:
-      "Get the output/trace of a GitLab pipeline job with optional pagination to limit context window usage",
+    description: "Get the output/trace of a GitLab pipeline job with optional pagination to limit context window usage",
     inputSchema: zodToJsonSchema(GetPipelineJobOutputSchema),
   },
   {
@@ -1024,9 +1024,7 @@ async function createIssue(
 ): Promise<GitLabIssue> {
   projectId = decodeURIComponent(projectId); // Decode project ID
   const effectiveProjectId = getEffectiveProjectId(projectId);
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(effectiveProjectId)}/issues`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(effectiveProjectId)}/issues`);
 
   const response = await fetch(url.toString(), {
     ...DEFAULT_FETCH_CONFIG,
@@ -1065,9 +1063,7 @@ async function listIssues(
 ): Promise<GitLabIssue[]> {
   projectId = decodeURIComponent(projectId); // Decode project ID
   const effectiveProjectId = getEffectiveProjectId(projectId);
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(effectiveProjectId)}/issues`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(effectiveProjectId)}/issues`);
 
   // Add all query parameters
   Object.entries(options).forEach(([key, value]) => {
@@ -1109,9 +1105,7 @@ async function listMergeRequests(
   options: Omit<z.infer<typeof ListMergeRequestsSchema>, "project_id"> = {}
 ): Promise<GitLabMergeRequest[]> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/merge_requests`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/merge_requests`);
 
   // Add all query parameters
   Object.entries(options).forEach(([key, value]) => {
@@ -1352,9 +1346,7 @@ async function createMergeRequest(
   options: z.infer<typeof CreateMergeRequestOptionsSchema>
 ): Promise<GitLabMergeRequest> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/merge_requests`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/merge_requests`);
 
   const response = await fetch(url.toString(), {
     ...DEFAULT_FETCH_CONFIG,
@@ -2336,9 +2328,7 @@ async function getProject(
   } = {}
 ): Promise<GitLabProject> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}`);
 
   if (options.license) {
     url.searchParams.append("license", "true");
@@ -2409,9 +2399,7 @@ async function listLabels(
 ): Promise<GitLabLabel[]> {
   projectId = decodeURIComponent(projectId); // Decode project ID
   // Construct the URL with project path
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/labels`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/labels`);
 
   // Add query parameters
   Object.entries(options).forEach(([key, value]) => {
@@ -2620,9 +2608,7 @@ async function listWikiPages(
   options: Omit<ListWikiPagesOptions, "project_id"> = {}
 ): Promise<GitLabWikiPage[]> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/wikis`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/wikis`);
   if (options.page) url.searchParams.append("page", options.page.toString());
   if (options.per_page) url.searchParams.append("per_page", options.per_page.toString());
   if (options.with_content)
@@ -2729,9 +2715,7 @@ async function listPipelines(
   options: Omit<ListPipelinesOptions, "project_id"> = {}
 ): Promise<GitLabPipeline[]> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/pipelines`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/pipelines`);
 
   // Add all query parameters
   Object.entries(options).forEach(([key, value]) => {
@@ -2818,9 +2802,7 @@ async function listPipelineJobs(
 }
 async function getPipelineJob(projectId: string, jobId: number): Promise<GitLabPipelineJob> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/jobs/${jobId}`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/jobs/${jobId}`);
 
   const response = await fetch(url.toString(), {
     ...DEFAULT_FETCH_CONFIG,
@@ -2844,12 +2826,7 @@ async function getPipelineJob(projectId: string, jobId: number): Promise<GitLabP
  * @param {number} offset - Number of lines to skip from the end (default: 0)
  * @returns {Promise<string>} The job output/trace
  */
-async function getPipelineJobOutput(
-  projectId: string,
-  jobId: number,
-  limit?: number,
-  offset?: number
-): Promise<string> {
+async function getPipelineJobOutput(projectId: string, jobId: number, limit?: number, offset?: number): Promise<string> {
   projectId = decodeURIComponent(projectId); // Decode project ID
   const url = new URL(
     `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/jobs/${jobId}/trace`
@@ -2869,33 +2846,33 @@ async function getPipelineJobOutput(
 
   await handleGitLabError(response);
   const fullTrace = await response.text();
-
+  
   // Apply client-side pagination to limit context window usage
   if (limit !== undefined || offset !== undefined) {
-    const lines = fullTrace.split("\n");
+    const lines = fullTrace.split('\n');
     const startOffset = offset || 0;
     const maxLines = limit || 1000;
-
+    
     // Return lines from the end, skipping offset lines and limiting to maxLines
     const startIndex = Math.max(0, lines.length - startOffset - maxLines);
     const endIndex = lines.length - startOffset;
-
+    
     const selectedLines = lines.slice(startIndex, endIndex);
-    const result = selectedLines.join("\n");
-
+    const result = selectedLines.join('\n');
+    
     // Add metadata about truncation
     if (startIndex > 0 || endIndex < lines.length) {
       const totalLines = lines.length;
       const shownLines = selectedLines.length;
       const skippedFromStart = startIndex;
       const skippedFromEnd = startOffset;
-
+      
       return `[Log truncated: showing ${shownLines} of ${totalLines} lines, skipped ${skippedFromStart} from start, ${skippedFromEnd} from end]\n\n${result}`;
     }
-
+    
     return result;
   }
-
+  
   return fullTrace;
 }
 
@@ -2913,9 +2890,7 @@ async function createPipeline(
   variables?: Array<{ key: string; value: string }>
 ): Promise<GitLabPipeline> {
   projectId = decodeURIComponent(projectId); // Decode project ID
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/pipeline`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/pipeline`);
 
   const body: any = { ref };
   if (variables && variables.length > 0) {
@@ -3035,9 +3010,7 @@ async function listProjectMilestones(
   options: Omit<z.infer<typeof ListProjectMilestonesSchema>, "project_id">
 ): Promise<GitLabMilestones[]> {
   projectId = decodeURIComponent(projectId);
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/milestones`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/milestones`);
 
   Object.entries(options).forEach(([key, value]) => {
     if (value !== undefined) {
@@ -3093,9 +3066,7 @@ async function createProjectMilestone(
   options: Omit<z.infer<typeof CreateProjectMilestoneSchema>, "project_id">
 ): Promise<GitLabMilestones> {
   projectId = decodeURIComponent(projectId);
-  const url = new URL(
-    `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/milestones`
-  );
+  const url = new URL(`${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/milestones`);
 
   const response = await fetch(url.toString(), {
     ...DEFAULT_FETCH_CONFIG,
@@ -3328,8 +3299,7 @@ async function listCommits(
   if (options.author) url.searchParams.append("author", options.author);
   if (options.all) url.searchParams.append("all", options.all.toString());
   if (options.with_stats) url.searchParams.append("with_stats", options.with_stats.toString());
-  if (options.first_parent)
-    url.searchParams.append("first_parent", options.first_parent.toString());
+  if (options.first_parent) url.searchParams.append("first_parent", options.first_parent.toString());
   if (options.order) url.searchParams.append("order", options.order);
   if (options.trailers) url.searchParams.append("trailers", options.trailers.toString());
   if (options.page) url.searchParams.append("page", options.page.toString());
@@ -3354,7 +3324,11 @@ async function listCommits(
  * @param {boolean} [stats] - Include commit stats
  * @returns {Promise<GitLabCommit>} The commit details
  */
-async function getCommit(projectId: string, sha: string, stats?: boolean): Promise<GitLabCommit> {
+async function getCommit(
+  projectId: string,
+  sha: string,
+  stats?: boolean
+): Promise<GitLabCommit> {
   projectId = decodeURIComponent(projectId);
   const url = new URL(
     `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/repository/commits/${encodeURIComponent(sha)}`
@@ -3382,7 +3356,10 @@ async function getCommit(projectId: string, sha: string, stats?: boolean): Promi
  * @param {string} sha - The commit hash or name of a repository branch or tag
  * @returns {Promise<GitLabMergeRequestDiff[]>} The commit diffs
  */
-async function getCommitDiff(projectId: string, sha: string): Promise<GitLabMergeRequestDiff[]> {
+async function getCommitDiff(
+  projectId: string,
+  sha: string
+): Promise<GitLabMergeRequestDiff[]> {
   projectId = decodeURIComponent(projectId);
   const url = new URL(
     `${GITLAB_API_URL}/projects/${encodeURIComponent(getEffectiveProjectId(projectId))}/repository/commits/${encodeURIComponent(sha)}/diff`
@@ -3468,7 +3445,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
     if (!request.params.arguments) {
       throw new Error("Arguments are required");
     }
-
+    
     // Ensure session is established for every request if cookie authentication is enabled
     if (GITLAB_AUTH_COOKIE_PATH) {
       await ensureSessionForRequest();
@@ -4144,9 +4121,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
       }
 
       case "get_pipeline_job_output": {
-        const { project_id, job_id, limit, offset } = GetPipelineJobOutputSchema.parse(
-          request.params.arguments
-        );
+        const { project_id, job_id, limit, offset } = GetPipelineJobOutputSchema.parse(request.params.arguments);
         const jobOutput = await getPipelineJobOutput(project_id, job_id, limit, offset);
         return {
           content: [
@@ -4386,6 +4361,8 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
   }
 });
 
+
+
 /**
  *  Color constants for terminal output
  */
@@ -4394,7 +4371,7 @@ const colorReset = "\x1b[0m";
 
 /**
  * Determine the transport mode based on environment variables and availability
- *
+ * 
  * Transport mode priority (highest to lowest):
  * 1. STREAMABLE_HTTP
  * 2. SSE
@@ -4405,15 +4382,18 @@ function determineTransportMode(): TransportMode {
   if (STREAMABLE_HTTP) {
     return TransportMode.STREAMABLE_HTTP;
   }
-
-  // Check for SSE support (medium priority)
+  
+  // Check for SSE support (medium priority)  
   if (SSE) {
     return TransportMode.SSE;
   }
-
+  
   // Default to stdio (lowest priority)
   return TransportMode.STDIO;
 }
+
+
+
 
 /**
  * Start server with stdio transport
@@ -4423,13 +4403,15 @@ async function startStdioServer(): Promise<void> {
   await server.connect(transport);
 }
 
+
+
 /**
  * Start server with traditional SSE transport
  */
 async function startSSEServer(): Promise<void> {
   const app = express();
   const transports: { [sessionId: string]: SSEServerTransport } = {};
-
+  
   app.get("/sse", async (_: Request, res: Response) => {
     const transport = new SSEServerTransport("/messages", res);
     transports[transport.sessionId] = transport;
@@ -4453,7 +4435,7 @@ async function startSSEServer(): Promise<void> {
     res.status(200).json({
       status: "healthy",
       version: SERVER_VERSION,
-      transport: TransportMode.SSE,
+      transport: TransportMode.SSE
     });
   });
 
@@ -4466,22 +4448,22 @@ async function startSSEServer(): Promise<void> {
 }
 
 /**
- * Start server with Streamable HTTP transport
+ * Start server with Streamable HTTP transport  
  */
 async function startStreamableHTTPServer(): Promise<void> {
   const app = express();
   const streamableTransports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
-
+  
   // Configure Express middleware
   app.use(express.json());
-
+  
   // Streamable HTTP endpoint - handles both session creation and message handling
-  app.post("/mcp", async (req: Request, res: Response) => {
-    const sessionId = req.headers["mcp-session-id"] as string;
-
+  app.post('/mcp', async (req: Request, res: Response) => {
+    const sessionId = req.headers['mcp-session-id'] as string;
+    
     try {
       let transport: StreamableHTTPServerTransport;
-
+      
       if (sessionId && streamableTransports[sessionId]) {
         // Reuse existing transport for ongoing session
         transport = streamableTransports[sessionId];
@@ -4493,9 +4475,9 @@ async function startStreamableHTTPServer(): Promise<void> {
           onsessioninitialized: (newSessionId: string) => {
             streamableTransports[newSessionId] = transport;
             logger.warn(`Streamable HTTP session initialized: ${newSessionId}`);
-          },
+          }
         });
-
+        
         // Set up cleanup handler when transport closes
         transport.onclose = () => {
           const sid = transport.sessionId;
@@ -4504,30 +4486,30 @@ async function startStreamableHTTPServer(): Promise<void> {
             delete streamableTransports[sid];
           }
         };
-
+        
         // Connect transport to MCP server before handling the request
         await server.connect(transport);
         await transport.handleRequest(req, res, req.body);
       }
     } catch (error) {
-      logger.error("Streamable HTTP error:", error);
-      res.status(500).json({
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
+      logger.error('Streamable HTTP error:', error);
+      res.status(500).json({ 
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
-
+  
   // Health check endpoint
   app.get("/health", (_: Request, res: Response) => {
     res.status(200).json({
       status: "healthy",
       version: SERVER_VERSION,
       transport: TransportMode.STREAMABLE_HTTP,
-      activeSessions: Object.keys(streamableTransports).length,
+      activeSessions: Object.keys(streamableTransports).length
     });
   });
-
+  
   // Start server
   app.listen(Number(PORT), HOST, () => {
     logger.info(`GitLab MCP Server running with Streamable HTTP transport`);
@@ -4540,23 +4522,23 @@ async function startStreamableHTTPServer(): Promise<void> {
  * Handle transport-specific initialization logic
  */
 async function initializeServerByTransportMode(mode: TransportMode): Promise<void> {
-  logger.info("Initializing server with transport mode:", mode);
+  logger.info('Initializing server with transport mode:', mode);
   switch (mode) {
     case TransportMode.STDIO:
-      logger.warn("Starting GitLab MCP Server with stdio transport");
+      logger.warn('Starting GitLab MCP Server with stdio transport');
       await startStdioServer();
       break;
-
+      
     case TransportMode.SSE:
-      logger.warn("Starting GitLab MCP Server with SSE transport");
+      logger.warn('Starting GitLab MCP Server with SSE transport');
       await startSSEServer();
       break;
-
+      
     case TransportMode.STREAMABLE_HTTP:
-      logger.warn("Starting GitLab MCP Server with Streamable HTTP transport");
+      logger.warn('Starting GitLab MCP Server with Streamable HTTP transport');
       await startStreamableHTTPServer();
       break;
-
+      
     default:
       // This should never happen with proper enum usage, but TypeScript requires it
       const exhaustiveCheck: never = mode;
