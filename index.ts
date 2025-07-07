@@ -3391,25 +3391,52 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   // Toggle pipeline tools by USE_PIPELINE flag
   let tools = USE_PIPELINE ? tools2 : tools2.filter(tool => !pipelineToolNames.includes(tool.name));
 
-  // <<< START: Gemini 호환성을 위해 $schema 제거 >>>
-  tools = tools.map(tool => {
-    // inputSchema가 존재하고 객체인지 확인
-    if (tool.inputSchema && typeof tool.inputSchema === "object" && tool.inputSchema !== null) {
-      // $schema 키가 존재하면 삭제
-      if ("$schema" in tool.inputSchema) {
-        // 불변성을 위해 새로운 객체 생성 (선택적이지만 권장)
-        const modifiedSchema = { ...tool.inputSchema };
-        delete modifiedSchema.$schema;
-        return { ...tool, inputSchema: modifiedSchema };
-      }
+  // <<< START: MCP 클라이언트 호환성을 위한 스키마 정리 >>>
+  // Fix for "fieldValue.toUpperCase is not a function" error in MCP clients
+  function sanitizeSchemaForMCPClients(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return obj;
     }
-    // 변경이 필요 없으면 그대로 반환
-    return tool;
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => sanitizeSchemaForMCPClients(item));
+    }
+
+    if (typeof obj === "object") {
+      const sanitized: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // Remove $schema fields that can cause issues
+        if (key === "$schema") {
+          continue;
+        }
+        sanitized[key] = sanitizeSchemaForMCPClients(value);
+      }
+      return sanitized;
+    }
+
+    // Return primitive values as-is (strings, numbers, booleans)
+    return obj;
+  }
+
+  tools = tools.map(tool => {
+    // Ensure tool name and description are strings
+    const sanitizedTool = {
+      ...tool,
+      name: String(tool.name),
+      description: String(tool.description),
+    };
+
+    // Sanitize inputSchema if it exists
+    if (tool.inputSchema && typeof tool.inputSchema === "object" && tool.inputSchema !== null) {
+      sanitizedTool.inputSchema = sanitizeSchemaForMCPClients(tool.inputSchema);
+    }
+
+    return sanitizedTool;
   });
-  // <<< END: Gemini 호환성을 위해 $schema 제거 >>>
+  // <<< END: MCP 클라이언트 호환성을 위한 스키마 정리 >>>
 
   return {
-    tools, // $schema가 제거된 도구 목록 반환
+    tools, // 스키마가 정리된 도구 목록 반환 (Sanitized tool schemas for MCP client compatibility)
   };
 });
 
