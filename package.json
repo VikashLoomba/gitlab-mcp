@@ -1,5 +1,9 @@
 {
-  "name": "@zereight/mcp-gitlab",
+  "name": "@VikashLoomba/mcp-gitlab",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VikashLoomba/gitlab-mcp.git"
+  },
   "version": "1.0.70",
   "description": "MCP server for using the GitLab API",
   "license": "MIT",
