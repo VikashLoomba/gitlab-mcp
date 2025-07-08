@@ -1,6 +1,6 @@
 name: Publish package to GitHub Packages
 on:
-  workflow_trigger:
+  workflow_dispatch:
   release:
     types: [published]
 jobs:
